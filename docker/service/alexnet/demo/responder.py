@@ -1,4 +1,4 @@
-from docker.generic_server import GenericResponder
+from service.generic_server import GenericResponder
 
 
 class Responder(GenericResponder):

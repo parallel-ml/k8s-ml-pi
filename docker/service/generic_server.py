@@ -15,7 +15,7 @@ PATH = os.path.abspath(__file__)
 DIR_PATH = os.path.dirname(PATH)
 
 # read data packet format.
-PROTOCOL = protocol.parse(open(DIR_PATH + '/resource/protocol/msg.avpr').read())
+PROTOCOL = protocol.parse(open(DIR_PATH + '/../resource/protocol/msg.avpr').read())
 
 
 class GenericResponder(ipc.Responder):
@@ -42,6 +42,7 @@ class GenericResponder(ipc.Responder):
 
 def responder_factory():
     path = DIR_PATH + '/' + '/'.join(ARGS.service.split('.')) + '/responder.py'
+    print path
     mod = imp.load_source('responder', path)
     return mod.Responder()
 
