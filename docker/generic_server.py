@@ -1,5 +1,5 @@
 """
-    A generic server for handling traffic. This could be inherited in side each sub module.
+    A generic server for handling traffic. This could be inherited in each sub module.
 """
 import argparse
 import os
@@ -14,10 +14,10 @@ PATH = os.path.abspath(__file__)
 DIR_PATH = os.path.dirname(PATH)
 
 # read data packet format.
-PROTOCOL = protocol.parse(open(DIR_PATH + '/resource/message/image.avpr').read())
+PROTOCOL = protocol.parse(open(DIR_PATH + '/resource/protocol/msg.avpr').read())
 
 
-class Responder(ipc.Responder):
+class GenericResponder(ipc.Responder):
     """ Responder called by handler when got request. """
 
     def __init__(self):
@@ -34,14 +34,13 @@ class Responder(ipc.Responder):
             Returns:
                 None: It just acts as confirmation for sender.
             Raises:
-                AvroException: if the data does not have correct syntac defined in Schema
+                NotImplementedException
         """
+        raise NotImplementedError('Invoke should be implemented by inherited class!')
 
-        try:
-            print msg, req
-            return
-        except Exception, e:
-            print e
+
+def responder_factory():
+    pass
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -51,7 +50,7 @@ class Handler(BaseHTTPRequestHandler):
             responder for each request. The responder generates response and write
             response to data sent back.
         """
-        self.responder = Responder()
+        self.responder = GenericResponder()
         call_request_reader = ipc.FramedReader(self.rfile)
         call_request = call_request_reader.read_framed_message()
         resp_body = self.responder.respond(call_request)
@@ -66,15 +65,17 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
     """ Handle requests in separate thread. """
 
 
-def main(cmd):
+def main():
     server = ThreadedHTTPServer(('0.0.0.0', 8080), Handler)
     server.allow_reuse_address = True
     server.serve_forever()
 
 
 if __name__ == '__main__':
+    global ARGS
     parser = argparse.ArgumentParser()
+    parser.add_argument('service', help='specific service for the server')
     parser.add_argument('-d', '--debug', action='store_true', default=False,
                         help='set to debug mode')
-    cmd = parser.parse_args()
-    main(cmd)
+    ARGS = parser.parse_args()
+    main()
