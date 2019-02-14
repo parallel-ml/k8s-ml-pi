@@ -7,6 +7,7 @@ from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 from SocketServer import ThreadingMixIn
 import avro.ipc as ipc
 import avro.protocol as protocol
+import imp
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -40,7 +41,9 @@ class GenericResponder(ipc.Responder):
 
 
 def responder_factory():
-    pass
+    path = DIR_PATH + '/' + '/'.join(ARGS.service.split('.')) + '/responder.py'
+    mod = imp.load_source('responder', path)
+    return mod.Responder()
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -50,7 +53,7 @@ class Handler(BaseHTTPRequestHandler):
             responder for each request. The responder generates response and write
             response to data sent back.
         """
-        self.responder = GenericResponder()
+        self.responder = responder_factory()
         call_request_reader = ipc.FramedReader(self.rfile)
         call_request = call_request_reader.read_framed_message()
         resp_body = self.responder.respond(call_request)
