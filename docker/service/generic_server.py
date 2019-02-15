@@ -8,6 +8,7 @@ from SocketServer import ThreadingMixIn
 import avro.ipc as ipc
 import avro.protocol as protocol
 import imp
+import ConfigParser
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -16,6 +17,10 @@ DIR_PATH = os.path.dirname(PATH)
 
 # read data packet format.
 PROTOCOL = protocol.parse(open(DIR_PATH + '/../resource/protocol/msg.avpr').read())
+
+# name to module
+SERVICE_MODULES = dict()
+RESPONDER_MODULES = dict()
 
 
 class GenericResponder(ipc.Responder):
@@ -41,10 +46,9 @@ class GenericResponder(ipc.Responder):
 
 
 def responder_factory():
-    path = DIR_PATH + '/' + '/'.join(ARGS.service.split('.')) + '/responder.py'
-    print path
-    mod = imp.load_source('responder', path)
-    return mod.Responder()
+    service_path = ARGS.service
+    responder_path = '.'.join(service_path.split('.')[:-1])
+    return RESPONDER_MODULES[responder_path].Responder(SERVICE_MODULES[service_path].Service)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -76,10 +80,24 @@ def main():
 
 
 if __name__ == '__main__':
+    # parse arguments from command line
     global ARGS
     parser = argparse.ArgumentParser()
     parser.add_argument('service', help='specific service for the server')
     parser.add_argument('-d', '--debug', action='store_true', default=False,
                         help='set to debug mode')
     ARGS = parser.parse_args()
+
+    # read modules from config file
+    config = ConfigParser.RawConfigParser()
+    config.read(DIR_PATH + '/service.cfg')
+    for key, val in config.items('service'):
+        if val == ARGS.service:
+            service_mod = imp.load_source(val, DIR_PATH + '/' + key)
+            SERVICE_MODULES[val] = service_mod
+    for key, val in config.items('responder'):
+        if val in ARGS.service:
+            responder_mod = imp.load_source(val, DIR_PATH + '/' + key)
+            RESPONDER_MODULES[val] = responder_mod
+
     main()
