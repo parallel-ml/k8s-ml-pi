@@ -9,7 +9,7 @@ DIR_PATH = os.path.dirname(PATH)
 # read data packet format.
 PROTOCOL = protocol.parse(open(DIR_PATH + '/../resource/protocol/msg.avpr').read())
 
-SERVER_ADDR = ('localhost', 8080)
+SERVER_ADDR = ('localhost', 8000)
 
 
 def send_request():
