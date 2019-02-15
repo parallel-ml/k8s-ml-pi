@@ -17,9 +17,10 @@ def send_request():
     requestor = ipc.Requestor(PROTOCOL, client)
 
     data = np.random.random_sample([220, 220, 3]) * 255
+    data = data.astype(np.uint8)
 
     packet = dict()
-    packet['input'] = data.astype(np.uint8).tobytes()
+    packet['input'] = data.tobytes()
     packet['input_shape'] = list(data.shape)
     packet['input_type'] = str(data.dtype)
 

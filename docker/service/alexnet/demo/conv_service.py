@@ -2,6 +2,16 @@ from service.generic_service import GenericService
 from keras.layers import Conv2D, MaxPooling2D, Flatten, Input
 from keras.models import Model
 import numpy as np
+import avro.ipc as ipc
+import avro.protocol as protocol
+import os
+from threading import Thread
+
+PATH = os.path.abspath(__file__)
+DIR_PATH = os.path.dirname(PATH)
+
+# read output packet format.
+PROTOCOL = protocol.parse(open(DIR_PATH + '/../../../resource/protocol/msg.avpr').read())
 
 
 class Service(GenericService):
@@ -29,7 +39,20 @@ class Service(GenericService):
         return self.model.predict(np.array([input]))
 
     def send(self, output):
-        pass
+        Thread(target=self.request, args=(output,)).start()
+
+    @staticmethod
+    def request(output):
+        client = ipc.HTTPTransceiver('localhost', 8001)
+        requestor = ipc.Requestor(PROTOCOL, client)
+
+        packet = dict()
+        packet['input'] = output.tobytes()
+        packet['input_shape'] = list(output.shape)
+        packet['input_type'] = str(output.dtype)
+
+        requestor.request('forward', packet)
+        client.close()
 
     def __repr__(self):
         return 'alexnet.demo.conv'
