@@ -32,6 +32,8 @@ spec:
       containers:
       - name: conv-service
         image: jiashenc/sysml-demo:arm
+        command: ["python"]
+        args: ["-m", "service.generic_server", "alexnet.demo.conv_service"]
         ports:
         - containerPort: 8080
 ---
@@ -42,7 +44,7 @@ metadata:
   name: fc-service
 spec:
   selector:
-    app: fc-servie
+    app: fc-service
   ports:
   - name: http
     protocol: TCP
@@ -69,5 +71,7 @@ spec:
       containers:
       - name: fc-service
         image: jiashenc/sysml-demo:arm
+        command: ["python"]
+        args: ["-m", "service.generic_server", "alexnet.demo.fc_service"]
         ports:
         - containerPort: 8080
