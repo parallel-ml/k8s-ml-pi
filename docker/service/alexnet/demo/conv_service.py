@@ -43,7 +43,7 @@ class Service(GenericService):
 
     @staticmethod
     def request(output):
-        client = ipc.HTTPTransceiver('localhost', 8001)
+        client = ipc.HTTPTransceiver('fc-service', 8080)
         requestor = ipc.Requestor(PROTOCOL, client)
 
         packet = dict()

@@ -1,0 +1,77 @@
+# conv service
+kind: Service
+apiVersion: v1
+metadata:
+  name: conv-service
+spec:
+  selector:
+    app: conv-service
+  ports:
+  - name: http
+    protocol: TCP
+    port: 8080
+    targetPort: 8080
+  type: NodePort
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: conv-service-deployment
+  labels:
+    app: conv-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: conv-service
+  template:
+    metadata:
+      labels:
+        app: conv-service
+    spec:
+      containers:
+      - name: conv-service
+        image: jiashenc/sysml-demo:amd64
+        command: ["python"]
+        args: ["-m", "service.generic_server", "alexnet.demo.conv_service"]
+        ports:
+        - containerPort: 8080
+---
+# fc service
+kind: Service
+apiVersion: v1
+metadata:
+  name: fc-service
+spec:
+  selector:
+    app: fc-service
+  ports:
+  - name: http
+    protocol: TCP
+    port: 8080
+    targetPort: 8080
+  type: NodePort
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fc-service-deployment
+  labels:
+    app: fc-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fc-service
+  template:
+    metadata:
+      labels:
+        app: fc-service
+    spec:
+      containers:
+      - name: fc-service
+        image: jiashenc/sysml-demo:amd64
+        command: ["python"]
+        args: ["-m", "service.generic_server", "alexnet.demo.fc_service"]
+        ports:
+        - containerPort: 8080
