@@ -6,7 +6,6 @@ import socket
 import time
 import struct
 
-
 sender_socket = socket.socket()
 sender_socket.connect(('127.0.0.1', 8000))
 connection = sender_socket.makefile('wb')

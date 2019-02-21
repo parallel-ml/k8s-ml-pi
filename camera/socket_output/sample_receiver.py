@@ -3,8 +3,7 @@ import socket
 import struct
 from PIL import Image
 
-# Start a socket listening for connections on 0.0.0.0:8000 (0.0.0.0 means
-# all interfaces)
+# Start a socket listening for connections on 127.0.0.1:8000 
 server_socket = socket.socket()
 server_socket.bind(('127.0.0.1', 8000))
 server_socket.listen(0)
