@@ -3,12 +3,19 @@ import sys
 import os
 import io
 import socket
-import time
 import struct
 
+# Sending to user specified port number and address
+print ("Please entered the destionation IP address.")
+ip_addr = sys.stdin.readline().rstrip()
+print ("Please enter the destination port number.")
+port=sys.stdin.readline().rstrip()
+port = int(port)
+# initialize socket
 sender_socket = socket.socket()
-sender_socket.connect(('127.0.0.1', 8000))
+sender_socket.connect((ip_addr, port))
 connection = sender_socket.makefile('wb')
+# Initialize the camera, set resolution to 220x220
 camera = PiCamera()
 camera.resolution=(220,220)
 camera.start_preview()
@@ -17,7 +24,6 @@ print ("press any key to take picture. Enter 'exit' to exit.")
 try:
     while (True):
         data=sys.stdin.readline()
-        start = time.time()
         stream = io.BytesIO()
         if (data=="exit\n"):
             break
