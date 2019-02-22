@@ -7,7 +7,7 @@ import numpy
 
 # Initialize the camera, set resolution to 220x220
 camera = PiCamera()
-RESOLUTION=[220,220,3]
+RESOLUTION=(220,220,3)
 npArrayDim=(224,224,3)
 camera.resolution=(RESOLUTION[0],RESOLUTION[1])
 # read data packet format.
@@ -23,7 +23,7 @@ def send_frame():
 
     output_array = numpy.empty((npArrayDim[0]*npArrayDim[1]*npArrayDim[2],), dtype=numpy.uint8)
     camera.capture(output_array, 'rgb')
-    output_array.reshape(npArrayDim)
+    output_array=output_array.reshape(npArrayDim)
     output_array=output_array[:RESOLUTION[0],:RESOLUTION[1],:RESOLUTION[2]]
 
     packet = dict()
