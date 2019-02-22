@@ -8,6 +8,7 @@ import numpy
 # Initialize the camera, set resolution to 220x220
 camera = PiCamera()
 RESOLUTION=[220,220,3]
+npArrayDim=(224,224,3)
 camera.resolution=(RESOLUTION[0],RESOLUTION[1])
 # read data packet format.
 DIR_PATH = os.getcwd()
@@ -20,8 +21,11 @@ def send_frame():
     client = ipc.HTTPTransceiver(SERVER_ADDR[0], SERVER_ADDR[1])
     requestor = ipc.Requestor(PROTOCOL, client)
 
-    output_array = numpy.empty(RESOLUTION, dtype=numpy.uint8)
+    output_array = numpy.empty((npArrayDim[0]*npArrayDim[1]*npArrayDim[2],), dtype=numpy.uint8)
     camera.capture(output_array, 'rgb')
+    output_array.reshape(npArrayDim)
+    output_array=output_array[:RESOLUTION[0],:RESOLUTION[1],:RESOLUTION[2]]
+
     packet = dict()
     packet['input'] = output_array.tobytes()
     packet['input_shape'] = list(output_array.shape)
