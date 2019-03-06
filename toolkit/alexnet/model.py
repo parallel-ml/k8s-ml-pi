@@ -53,6 +53,3 @@ if __name__ == '__main__':
         model = alexnet()
     else:
         model = alexnet(sys.argv[1])
-
-    
-
