@@ -1,10 +1,13 @@
 from custom_layers import SplitTensor, LRN2D
 from keras.layers import Conv2D, MaxPooling2D, ZeroPadding2D, Concatenate, Activation, Dense, Dropout, Flatten, Input
 from keras.models import Model
+from keras import backend as K
+import sys
 
 
 def alexnet(weights_path=None):
-    inputs = Input([227, 227, 3])
+    K.set_image_data_format('channels_first')
+    inputs = Input([3, 227, 227])
 
     X = Conv2D(96, (11, 11), strides=(4, 4), activation='relu')(inputs)
 
@@ -38,10 +41,18 @@ def alexnet(weights_path=None):
     prediction = Activation('softmax')(X)
 
     model = Model(input=inputs, output=prediction)
+    model.summary()
     if weights_path is not None:
         model.load_weights(weights_path)
     return model
 
 
 if __name__ == '__main__':
-    model = alexnet()
+    if len(sys.argv) < 3:
+        print 'Using default setting, no-weight.'
+        model = alexnet()
+    else:
+        model = alexnet(sys.argv[1])
+
+    
+
