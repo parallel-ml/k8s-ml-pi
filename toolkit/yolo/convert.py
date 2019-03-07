@@ -5,7 +5,7 @@ It reads Darknet config and weights and creates Keras model with TF backend.
 
 import argparse
 import configparser
-import io
+from io import BytesIO as StringIO
 import os
 from collections import defaultdict
 
@@ -17,6 +17,7 @@ from keras.layers.advanced_activations import LeakyReLU
 from keras.layers.normalization import BatchNormalization
 from keras.models import Model
 from keras.regularizers import l2
+import json
 
 parser = argparse.ArgumentParser(description='Darknet To Keras Converter.')
 parser.add_argument('config_path', help='Path to Darknet cfg file.')
@@ -35,7 +36,7 @@ def unique_config_sections(config_file):
     Adds unique suffixes to config sections for compability with configparser.
     """
     section_counters = defaultdict(int)
-    output_stream = io.StringIO()
+    output_stream = StringIO()
     with open(config_file) as fin:
         for line in fin:
             if line.startswith('['):
@@ -79,7 +80,7 @@ def _main(args):
     cfg_parser.read_file(unique_config_file)
 
     print('Creating Keras model.')
-    input_layer = Input(shape=(None, None, 3))
+    input_layer = Input(shape=(227, 227, 3))
     prev_layer = input_layer
     all_layers = []
 
@@ -87,6 +88,10 @@ def _main(args):
                          ) if 'net_0' in cfg_parser.sections() else 5e-4
     count = 0
     out_index = []
+
+    # Add layer shortcut for later reconstructing the model
+    layer_shortcut = dict()
+
     for section in cfg_parser.sections():
         print('Parsing section {}'.format(section))
         if section.startswith('convolutional'):
@@ -208,6 +213,7 @@ def _main(args):
             assert activation == 'linear', 'Only linear activation supported.'
             all_layers.append(Add()([all_layers[index], prev_layer]))
             prev_layer = all_layers[-1]
+            layer_shortcut[str(all_layers[-1].name).split('/')[0]] = str(all_layers[index - 1].name).split('/')[0]
 
         elif section.startswith('upsample'):
             stride = int(cfg_parser[section]['stride'])
@@ -231,6 +237,27 @@ def _main(args):
     if len(out_index) == 0: out_index.append(len(all_layers) - 1)
     model = Model(inputs=input_layer, outputs=[all_layers[i] for i in out_index])
     print(model.summary())
+
+    # Extract weights, layer structure
+    print layer_shortcut
+    layer_names = []
+    model_structure_config = dict()
+    for layer in model.layers:
+        layer_names.append(layer.get_config()['name'])
+        layer_config = dict()
+        try:
+            layer_config['input_shape'] = list(layer.input_shape)[1:]
+        except Exception as e:
+            print e
+        layer_config['config'] = layer.get_config()
+        layer_config['class_name'] = layer.__class__.__name__
+        model_structure_config[layer_names[-1]] = layer_config
+    for key, value in layer_shortcut.items():
+        model_structure_config[key]['residual'] = value
+    with open('resource/layers-names', 'w+') as f:
+        f.write('\n'.join(layer_names))
+    with open('resource/model-structure.json', 'w+') as f:
+        json.dump(model_structure_config, f)
 
     if args.weights_only:
         model.save_weights('{}'.format(output_path))
