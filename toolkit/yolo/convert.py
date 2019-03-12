@@ -90,7 +90,7 @@ def _main(args):
     out_index = []
 
     # Add layer shortcut for later reconstructing the model
-    layer_shortcut = dict()
+    layer_prev_map = defaultdict(list)
 
     for section in cfg_parser.sections():
         print('Parsing section {}'.format(section))
@@ -162,7 +162,9 @@ def _main(args):
             # Create Conv2D layer
             if stride > 1:
                 # Darknet uses left and top padding instead of 'same' mode
-                prev_layer = ZeroPadding2D(((1, 0), (1, 0)))(prev_layer)
+                tmp_prev_layer = ZeroPadding2D(((1, 0), (1, 0)))(prev_layer)
+                layer_prev_map[str(tmp_prev_layer.name).split('/')[0]].append(str(prev_layer.name).split('/')[0])
+                prev_layer = tmp_prev_layer
             conv_layer = (Conv2D(
                 filters, (size, size),
                 strides=(stride, stride),
@@ -171,16 +173,19 @@ def _main(args):
                 weights=conv_weights,
                 activation=act_fn,
                 padding=padding))(prev_layer)
+            layer_prev_map[str(conv_layer.name).split('/')[0]].append(str(prev_layer.name).split('/')[0])
 
             if batch_normalize:
-                conv_layer = (BatchNormalization(
-                    weights=bn_weight_list))(conv_layer)
+                tmp_conv_layer = (BatchNormalization(weights=bn_weight_list))(conv_layer)
+                layer_prev_map[str(tmp_conv_layer.name).split('/')[0]].append(str(conv_layer.name).split('/')[0])
+                conv_layer = tmp_conv_layer
             prev_layer = conv_layer
 
             if activation == 'linear':
                 all_layers.append(prev_layer)
             elif activation == 'leaky':
                 act_layer = LeakyReLU(alpha=0.1)(prev_layer)
+                layer_prev_map[str(act_layer.name).split('/')[0]].append(str(prev_layer.name).split('/')[0])
                 prev_layer = act_layer
                 all_layers.append(act_layer)
 
@@ -190,6 +195,8 @@ def _main(args):
             if len(layers) > 1:
                 print('Concatenating route layers:', layers)
                 concatenate_layer = Concatenate()(layers)
+                for layer in layers:
+                    layer_prev_map[str(concatenate_layer.name).split('/')[0]].append(str(layer.name).split('/')[0])
                 all_layers.append(concatenate_layer)
                 prev_layer = concatenate_layer
             else:
@@ -205,6 +212,7 @@ def _main(args):
                     pool_size=(size, size),
                     strides=(stride, stride),
                     padding='same')(prev_layer))
+            layer_prev_map[str(all_layers[-1].name).split('/')[0]].append(str(prev_layer.name).split('/')[0])
             prev_layer = all_layers[-1]
 
         elif section.startswith('shortcut'):
@@ -212,13 +220,15 @@ def _main(args):
             activation = cfg_parser[section]['activation']
             assert activation == 'linear', 'Only linear activation supported.'
             all_layers.append(Add()([all_layers[index], prev_layer]))
+            layer_prev_map[str(all_layers[-1].name).split('/')[0]].append(str(all_layers[index - 1].name).split('/')[0])
+            layer_prev_map[str(all_layers[-1].name).split('/')[0]].append(str(prev_layer.name).split('/')[0])
             prev_layer = all_layers[-1]
-            layer_shortcut[str(all_layers[-1].name).split('/')[0]] = str(all_layers[index - 1].name).split('/')[0]
 
         elif section.startswith('upsample'):
             stride = int(cfg_parser[section]['stride'])
             assert stride == 2, 'Only stride=2 supported.'
             all_layers.append(UpSampling2D(stride)(prev_layer))
+            layer_prev_map[str(all_layers[-1].name).split('/')[0]].append(str(prev_layer.name).split('/')[0])
             prev_layer = all_layers[-1]
 
         elif section.startswith('yolo'):
@@ -239,7 +249,7 @@ def _main(args):
     print(model.summary())
 
     # Extract weights, layer structure
-    print layer_shortcut
+    print layer_prev_map
     layer_names = []
     model_structure_config = dict()
     for layer in model.layers:
@@ -252,8 +262,10 @@ def _main(args):
         layer_config['config'] = layer.get_config()
         layer_config['class_name'] = layer.__class__.__name__
         model_structure_config[layer_names[-1]] = layer_config
-    for key, value in layer_shortcut.items():
-        model_structure_config[key]['residual'] = value
+    for key, value in layer_prev_map.items():
+        model_structure_config[key]['prev'] = value
+    for i in out_index:
+        model_structure_config[str(all_layers[i].name).split('/')[0]]['output'] = True
     with open('resource/layers-names', 'w+') as f:
         f.write('\n'.join(layer_names))
     with open('resource/model-structure.json', 'w+') as f:

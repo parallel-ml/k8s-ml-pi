@@ -1,27 +1,15 @@
-''' As a demo purpose, some portions of code are from keras2-yolo, keras3-yolo3. '''
+""" As a demo purpose, some portions of code are from keras2-yolo, keras3-yolo3. """
 from keras.models import Model, load_model
-from keras.layers import Input, Conv2D, Add, ZeroPadding2D, BatchNormalization, LeakyReLU
+from keras.layers import Input, Conv2D, Add, ZeroPadding2D, BatchNormalization, LeakyReLU, UpSampling2D, Concatenate
 import yaml
 import cv2
 from detection_util import preprocess_input, decode_netout, do_nms, draw_boxes, correct_yolo_boxes
 
 
-LAYERS = ['conv2d_1',
-          'batch_normalization_1',
-          'leaky_re_lu_1',
-          'zero_padding2d_1',
-          'conv2d_2',
-          'batch_normalization_2',
-          'leaky_re_lu_2',
-          'conv2d_3',
-          'batch_normalization_3',
-          'leaky_re_lu_3',
-          'conv2d_4',
-          'batch_normalization_4',
-          'leaky_re_lu_4',
-          'add_1']
 MODEL_TOPO = 'resource/model-structure.json'
 MODEL_WEIGHT = 'resource/yolo.h5'
+START, END = 1, 252
+LAYERS = []
 
 net_h, net_w = 320, 320
 obj_thresh, nms_thresh = 0.5, 0.45
@@ -39,20 +27,34 @@ labels = ['person', 'bicycle', 'car', 'motorbike', 'aeroplane', 'bus', 'train', 
 
 
 def load_model_from_weights():
-    ''' Customized method to load model from config. '''
-    layers = []
-    prev_layer = None
-    layername_2_idx = dict()
+    """ Customized method to load model from config. """
+    with open('resource/layers-names') as f:
+        for i, line in enumerate(f.read().splitlines()):
+            if START <= i <= END:
+                LAYERS.append(line)
+
+    layers, output_layers = [], []
+    layer_name_2_idx = dict()
+
     with open(MODEL_TOPO) as f:
         model_config = yaml.safe_load(f)
         for layer in LAYERS:
             class_name = model_config[layer]['class_name']
             config = model_config[layer]['config']
             input_shape = model_config[layer]['input_shape']
+            prev_layers = model_config[layer]['prev']
+            output = True if 'output' in model_config[layer] else False
 
+            # previous layers picked from dictionary
             if len(layers) == 0:
                 layers.append(Input(input_shape))
                 prev_layer = layers[-1]
+            elif len(prev_layers) == 1:
+                prev_layer = layers[layer_name_2_idx[prev_layers[0]]]
+            elif len(prev_layers) == 2:
+                prev_layer = [layers[layer_name_2_idx[name]] for name in prev_layers]
+            else:
+                raise ValueError('Previous layer error is not handled')
 
             if class_name == 'Conv2D':
                 prev_layer = Conv2D(**config)(prev_layer)
@@ -63,26 +65,35 @@ def load_model_from_weights():
             elif class_name == 'LeakyReLU':
                 prev_layer = LeakyReLU(**config)(prev_layer)
             elif class_name == 'Add':
-                shortcut = model_config[layer]['residual']
-                prev_layer = Add()([layers[layername_2_idx[shortcut]], prev_layer])
+                prev_layer = Add(**config)(prev_layer)
+            elif class_name == 'UpSampling2D':
+                prev_layer = UpSampling2D(**config)(prev_layer)
+            elif class_name == 'Concatenate':
+                prev_layer = Concatenate(**config)(prev_layer)
             else:
                 raise ValueError('Current layer is not supported')
-            layers.append(prev_layer)
-            layername_2_idx[layer] = len(layers) - 1
 
-    model = Model(layers[0], layers[-1])
-    model.load_weights(MODEL_WEIGHT, by_name=True)
+            # append the new layer to the list and add entry for translating the
+            # layer name to its position in the list
+            layers.append(prev_layer)
+            if output:
+                output_layers.append(prev_layer)
+            layer_name_2_idx[layer] = len(layers) - 1
+
+    model = Model(layers[0], output=[layer for layer in output_layers])
     model.summary()
+    model.load_weights(MODEL_WEIGHT, by_name=True)
+    return model
 
 
 if __name__ == '__main__':
-    # load_model_from_weights()
-    image_path = '/home/jiashenc/tmp/dog.jpg'
+    image_path = '/tmp/dog.jpg'
     image = cv2.imread(image_path)
     image_h, image_w, _ = image.shape
     new_image = preprocess_input(image, net_h, net_w)
 
-    model = load_model(MODEL_WEIGHT)
+    model = load_model_from_weights()
+    # model = load_model(MODEL_WEIGHT)
     results = model.predict(new_image)
     boxes = []
 
