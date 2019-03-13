@@ -17,7 +17,10 @@
         "name" : "input_type",
         "type" : "string"
       } ],
-      "response" : "null"
+      "response" : {
+        "type" : "array",
+        "items" : "float"
+      }
     }
   }
 }

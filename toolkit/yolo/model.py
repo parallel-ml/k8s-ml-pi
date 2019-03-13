@@ -90,6 +90,7 @@ if __name__ == '__main__':
     image_path = '/tmp/dog.jpg'
     image = cv2.imread(image_path)
     image_h, image_w, _ = image.shape
+    print image_h, image_w
     new_image = preprocess_input(image, net_h, net_w)
 
     model = load_model_from_weights()

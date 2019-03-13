@@ -1,3 +1,5 @@
+// This protocol is only designed for YOLO network object detection application.
+// The return value is a array which should be [x min, y min, x max, y max, label, score]
 protocol msg {
-    void forward(bytes input, array<int> input_shape, string input_type);
+    array<float> forward(bytes input, array<int> input_shape, string input_type);
 }
