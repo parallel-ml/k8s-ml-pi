@@ -28,6 +28,10 @@ class BoundBox:
 
         return self.score
 
+    def __repr__(self):
+        return 'label: ' + str(self.get_label()) + ' score: ' + str(self.get_score()) \
+               + ' box: [' + str(self.xmin) + ' ' + str(self.ymin) + ' ' + str(self.xmax) + ' ' + str(self.ymax) + ']'
+
 
 def _interval_overlap(interval_a, interval_b):
     x1, x2 = interval_a
@@ -106,7 +110,8 @@ def decode_netout(netout, anchors, obj_thresh, nms_thresh, net_h, net_w):
             # 4th element is objectness score
             objectness = netout[row, col, b, 4]
 
-            if (objectness <= obj_thresh): continue
+            if objectness <= obj_thresh:
+                continue
 
             # first 4 elements are x, y, w, and h
             x, y, w, h = netout[row, col, b, :4]
@@ -118,9 +123,7 @@ def decode_netout(netout, anchors, obj_thresh, nms_thresh, net_h, net_w):
 
             # last elements are class probabilities
             classes = netout[row, col, b, 5:]
-
             box = BoundBox(x - w / 2, y - h / 2, x + w / 2, y + h / 2, objectness, classes)
-
             boxes.append(box)
 
     return boxes
@@ -156,7 +159,8 @@ def do_nms(boxes, nms_thresh):
         for i in range(len(sorted_indices)):
             index_i = sorted_indices[i]
 
-            if boxes[index_i].classes[c] == 0: continue
+            if boxes[index_i].classes[c] == 0:
+                continue
 
             for j in range(i + 1, len(sorted_indices)):
                 index_j = sorted_indices[j]
@@ -167,22 +171,50 @@ def do_nms(boxes, nms_thresh):
 
 def draw_boxes(image, boxes, labels, obj_thresh):
     for box in boxes:
-        label_str = ''
-        label = -1
+        label = box.get_label()
+        label_str = labels[label]
 
-        for i in range(len(labels)):
-            if box.classes[i] > obj_thresh:
-                label_str += labels[i]
-                label = i
-                print(labels[i] + ': ' + str(box.classes[i] * 100) + '%')
+        # This piece of code is commented out for simple RPC data transfer for services based demo
+        # for i in range(len(labels)):
+        #     if box.classes[i] > obj_thresh:
+        #         label_str += labels[i]
+        #         label = i
+        #         print(labels[i] + ': ' + str(box.classes[i] * 100) + '%')
 
         if label >= 0:
             cv2.rectangle(image, (box.xmin, box.ymin), (box.xmax, box.ymax), (0, 255, 0), 3)
-            cv2.putText(image,
-                        label_str + ' ' + str(box.get_score()),
-                        (box.xmin, box.ymin - 13),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        1e-3 * image.shape[0],
-                        (0, 255, 0), 2)
+            cv2.putText(image, label_str + ' ' + str(box.get_score()),
+                        (box.xmin, box.ymin - 13), cv2.FONT_HERSHEY_SIMPLEX, 1e-3 * image.shape[0], (0, 255, 0), 2)
 
     return image
+
+
+def trim_box(boxes):
+    return [box for box in boxes if box.get_score() > 0.5]
+
+
+def encode_box(boxes):
+    """ Encode box into array like structure for Avro to transfer """
+    encoded = []
+    for box in boxes:
+        encoded.append(box.xmin)
+        encoded.append(box.ymin)
+        encoded.append(box.xmax)
+        encoded.append(box.ymax)
+        encoded.append(box.get_label())
+        encoded.append(box.get_score())
+    return encoded
+
+
+def decode_box(array):
+    """ Decode array like data structure to BoundBox object """
+    assert len(array) % 6 == 0, 'Cannot decode array with length that is not multiple of 6'
+
+    boxes = []
+    for i in range(0, len(array), 6):
+        xmin, ymin, xmax, ymax, label, score = array[i:i+6]
+        box = BoundBox(xmin, ymin, xmax, ymax)
+        box.score = score
+        box.label = label
+        boxes.append(box)
+    return boxes
