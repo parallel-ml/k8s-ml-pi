@@ -1,5 +1,5 @@
 from service.generic_service import GenericService
-from service.yolo.util import load_yolo_model, decode_netout, correct_yolo_boxes, do_nms, trim_box, encode_box, \
+from service.yolo.util import load_yolo_model, decode_netout, do_nms, trim_box, encode_box, \
     anchors, obj_thresh, nms_thresh, net_h, net_w
 import os
 

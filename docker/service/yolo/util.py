@@ -238,16 +238,22 @@ def decode_box(array):
 
 
 def load_yolo_model(layer_range=(1, 252)):
-    """ Helper method for loading YOLO model with customized topology and according weights """
+    """
+        Helper method for loading YOLO model with customized topology and according weights
+
+        Args:
+            layer_range: Specify which layers to load, number points to lower range and upper
+            range of layer in layername file. This range is inclusive.
+    """
     import os
     dir_path = os.path.dirname(os.path.realpath(__file__))
 
     lower, upper = layer_range
+    lower -= 1
     layer_names = []
     with open(dir_path + '/resource/layers-names') as f:
-        for i, line in enumerate(f.read().splitlines()):
-            if lower <= i <= upper:
-                layer_names.append(line)
+        for i, line in enumerate(f.read().splitlines()[lower:upper]):
+            layer_names.append(line)
 
     layers, output_layers = [], []
     layer_name_2_idx = dict()
