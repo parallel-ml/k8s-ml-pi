@@ -237,7 +237,7 @@ def decode_box(array):
     return boxes
 
 
-def load_yolo_model(layer_range=(1, 252)):
+def load_yolo_model(layer_range=(2, 252), pre_built=dict()):
     """
         Helper method for loading YOLO model with customized topology and according weights
 
@@ -274,7 +274,8 @@ def load_yolo_model(layer_range=(1, 252)):
             elif len(prev_layers) == 1:
                 prev_layer = layers[layer_name_2_idx[prev_layers[0]]]
             elif len(prev_layers) == 2:
-                prev_layer = [layers[layer_name_2_idx[name]] for name in prev_layers]
+                prev_layer = [layers[layer_name_2_idx[name]] if name in layer_name_2_idx else pre_built[name] for name
+                              in prev_layers]
             else:
                 raise ValueError('Previous layer error is not handled')
 
@@ -302,7 +303,10 @@ def load_yolo_model(layer_range=(1, 252)):
                 output_layers.append(prev_layer)
             layer_name_2_idx[layer] = len(layers) - 1
 
-    model = Model(layers[0], output=[layer for layer in output_layers])
+    if len(output_layers) > 0:
+        model = Model(layers[0], output=[layer for layer in output_layers])
+    else:
+        model = Model(layers[0], output=layers[-1])
     model.summary()
     model.load_weights(dir_path + '/resource/yolo.h5', by_name=True)
     return model
