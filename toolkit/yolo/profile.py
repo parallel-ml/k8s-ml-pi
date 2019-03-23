@@ -70,7 +70,7 @@ def load_model_and_profile():
 
             # profile the layer if it is a residual layer
             if 'add' in layer and 'padding' not in layer:
-                model = Model(layers[0], output=[layer for layer in output_layers])
+                model = Model(layers[0], output=layers[-1])
                 start = time.time()
                 for _ in range(100):
                     model.predict(np.array([data]))
