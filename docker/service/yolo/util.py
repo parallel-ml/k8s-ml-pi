@@ -2,7 +2,8 @@
 import numpy as np
 import cv2
 import yaml
-from keras.layers import Conv2D, UpSampling2D, BatchNormalization, Add, Concatenate, LeakyReLU, Input, ZeroPadding2D
+from keras.layers import Conv2D, UpSampling2D, BatchNormalization, Add, Concatenate, LeakyReLU, Input, ZeroPadding2D, \
+    Lambda
 from keras.models import Model
 
 net_h, net_w = 320, 320
@@ -258,7 +259,7 @@ def load_yolo_model(layer_range=(2, 252), pre_built=dict()):
     layers, output_layers = [], []
     layer_name_2_idx = dict()
 
-    with open(dir_path + '/resource/model-structure.json') as f:
+    with open(dir_path + '/resource/model-structure-for-profile.json') as f:
         model_config = yaml.safe_load(f)
         for layer in layer_names:
             class_name = model_config[layer]['class_name']
@@ -274,8 +275,9 @@ def load_yolo_model(layer_range=(2, 252), pre_built=dict()):
             elif len(prev_layers) == 1:
                 prev_layer = layers[layer_name_2_idx[prev_layers[0]]]
             elif len(prev_layers) == 2:
-                prev_layer = [layers[layer_name_2_idx[name]] if name in layer_name_2_idx else pre_built[name] for name
-                              in prev_layers]
+                prev_layer = [
+                    layers[layer_name_2_idx[name]] if name in layer_name_2_idx else Lambda(lambda x: x)(pre_built[name])
+                    for name in prev_layers]
             else:
                 raise ValueError('Previous layer error is not handled')
 
@@ -303,10 +305,16 @@ def load_yolo_model(layer_range=(2, 252), pre_built=dict()):
                 output_layers.append(prev_layer)
             layer_name_2_idx[layer] = len(layers) - 1
 
+    input_list = [layers[0]]
+    if 'add_19' in pre_built:
+        input_list.append(pre_built['add_19'])
+    if 'add_11' in pre_built:
+        input_list.append(pre_built['add_11'])
+
     if len(output_layers) > 0:
-        model = Model(layers[0], output=[layer for layer in output_layers])
+        model = Model(input_list, output=[layer for layer in output_layers])
     else:
-        model = Model(layers[0], output=layers[-1])
+        model = Model(input_list, output=layers[-1])
     model.summary()
     model.load_weights(dir_path + '/resource/yolo.h5', by_name=True)
     return model
