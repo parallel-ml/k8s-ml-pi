@@ -12,7 +12,7 @@ class Responder(GenericResponder):
             input_shape = req['input_shape']
             data = np.fromstring(req['input'], req['input_type']).reshape(input_shape)
             output = self.service.predict(data)
-            return output
+            return self.service.send(output)
 
         except Exception as e:
             print e
