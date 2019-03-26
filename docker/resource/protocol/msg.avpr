@@ -19,7 +19,7 @@
       } ],
       "response" : {
         "type" : "array",
-        "items" : "float"
+        "items" : "bytes"
       }
     }
   }
