@@ -2,8 +2,7 @@
 Bounding box service takes care of model inference after darknet-53.
 """
 from service.generic_service import GenericService
-from service.yolo.util import load_yolo_model, decode_netout, do_nms, trim_box, encode_box, \
-    anchors, obj_thresh, nms_thresh, net_h, net_w
+from service.yolo.util import load_yolo_model
 from keras.layers import Input
 import os
 import numpy as np
@@ -21,22 +20,15 @@ class Service(GenericService):
     def predict(self, input):
         input = [input[0], input[1], input[2]]
         results = self.model.predict(input)
-        boxes = []
-
         for i in range(len(results)):
-            boxes += decode_netout(results[i][0], anchors[i], obj_thresh, nms_thresh, net_h, net_w)
-
-        do_nms(boxes, nms_thresh)
-
-        boxes = trim_box(boxes)
-        array = encode_box(boxes)
-        return array
+            results[i] = results[i].tobytes()
+        return results
 
     def simulate(self, size):
         return np.array([np.random.random_sample(size)])
 
     def send(self, output):
-        pass
+        return output
 
     def __repr__(self):
         return 'yolo.demo.bb-service'
