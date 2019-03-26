@@ -2,6 +2,7 @@ from service.generic_service import GenericService
 from service.yolo.util import load_yolo_model
 import avro.ipc as ipc
 import avro.protocol as protocol
+import numpy as np
 import os
 
 PATH = os.path.abspath(__file__)
@@ -16,6 +17,7 @@ class Service(GenericService):
         self.model = load_yolo_model([2, 93])
 
     def predict(self, input):
+        input = np.fromstring(input[0], np.float64).reshape([1, 320, 320, 3])
         return self.model.predict(input)
 
     def send(self, output):
@@ -23,9 +25,7 @@ class Service(GenericService):
         requestor = ipc.Requestor(PROTOCOL, client)
 
         packet = dict()
-        packet['input'] = output.tobytes()
-        packet['input_shape'] = list(output.shape)
-        packet['input_type'] = str(output.dtype)
+        packet['input'] = [output.tobytes()]
 
         result = requestor.request('forward', packet)
         client.close()

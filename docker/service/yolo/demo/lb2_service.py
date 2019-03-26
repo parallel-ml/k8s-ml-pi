@@ -17,17 +17,17 @@ class Service(GenericService):
         self.model = load_yolo_model([94, 153])
 
     def predict(self, input):
+        input = np.fromstring(input[0], np.float32).reshape([1, 40, 40, 256])
         output = self.model.predict(input)
-        return np.array([output, output, input], copy=True)
+        return [np.array(output, copy=True), output, input]
 
     def send(self, output):
         client = ipc.HTTPTransceiver('bb-service', 8080)
         requestor = ipc.Requestor(PROTOCOL, client)
 
         packet = dict()
-        packet['input'] = output.tobytes()
-        packet['input_shape'] = list(output.shape)
-        packet['input_type'] = str(output.dtype)
+        output = [element.tobytes() for element in output]
+        packet['input'] = output
 
         result = requestor.request('forward', packet)
         client.close()

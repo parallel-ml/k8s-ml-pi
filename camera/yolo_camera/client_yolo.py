@@ -11,7 +11,8 @@ DIR_PATH = os.path.dirname(PATH)
 
 # read data packet format.
 PROTOCOL = protocol.parse(open(DIR_PATH + '/../../docker/resource/protocol/msg.avpr').read())
-SERVER_ADDR = ['localhost', 8080]
+SERVER_ADDR = ['192.168.99.102', 31895]
+# SERVER_ADDR = ['localhost', 8080]
 
 net_h, net_w = 320, 320
 obj_thresh, nms_thresh = 0.5, 0.45
@@ -226,9 +227,7 @@ def send_request():
     data = preprocess_input(image, net_h, net_w)
 
     packet = dict()
-    packet['input'] = data.tobytes()
-    packet['input_shape'] = list(data.shape)
-    packet['input_type'] = str(data.dtype)
+    packet['input'] = [data.tobytes()]
 
     start = time.time()
     array = requestor.request('forward', packet)

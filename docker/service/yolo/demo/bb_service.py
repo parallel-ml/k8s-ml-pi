@@ -18,7 +18,8 @@ class Service(GenericService):
                                                   'add_19': Input([20, 20, 512])})
 
     def predict(self, input):
-        input = [input[0], input[1], input[2]]
+        input = [self.to_numpy(input[0], [1, 20, 20, 512]), self.to_numpy(input[1], [1, 20, 20, 512]),
+                 self.to_numpy(input[2], [1, 40, 40, 256])]
         results = self.model.predict(input)
         for i in range(len(results)):
             results[i] = results[i].tobytes()
@@ -26,6 +27,9 @@ class Service(GenericService):
 
     def simulate(self, size):
         return np.array([np.random.random_sample(size)])
+
+    def to_numpy(selfs, bytes, size):
+        return np.fromstring(bytes, np.float32).reshape(size)
 
     def send(self, output):
         return output

@@ -6,16 +6,10 @@
     "forward" : {
       "request" : [ {
         "name" : "input",
-        "type" : "bytes"
-      }, {
-        "name" : "input_shape",
         "type" : {
           "type" : "array",
-          "items" : "int"
+          "items" : "bytes"
         }
-      }, {
-        "name" : "input_type",
-        "type" : "string"
       } ],
       "response" : {
         "type" : "array",

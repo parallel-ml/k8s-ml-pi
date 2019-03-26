@@ -1,5 +1,4 @@
 from service.generic_server import GenericResponder
-import numpy as np
 
 
 class Responder(GenericResponder):
@@ -9,10 +8,11 @@ class Responder(GenericResponder):
 
     def invoke(self, msg, req):
         try:
-            input_shape = req['input_shape']
-            data = np.fromstring(req['input'], req['input_type']).reshape(input_shape)
-            output = self.service.predict(data)
-            return self.service.send(output)
+            output = self.service.predict(req['input'])
+            print 'finish prediction'
+            next_result = self.service.send(output)
+            print 'get response from next layer'
+            return next_result
 
         except Exception as e:
             print e

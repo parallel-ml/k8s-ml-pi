@@ -33,9 +33,10 @@ spec:
       - name: lb1-service
         image: jiashenc/sysml-demo:yolo-amd64
         command: ["python"]
-        args: ["-m", "service.generic_server", "yolo.demo.lb1_service"]
+        args: ["-u", "-m", "service.generic_server", "yolo.demo.lb1_service"]
         ports:
         - containerPort: 8080
+        imagePullPolicy: Always
 ---
 # lb2 service
 kind: Service
@@ -72,9 +73,10 @@ spec:
       - name: lb2-service
         image: jiashenc/sysml-demo:yolo-amd64
         command: ["python"]
-        args: ["-m", "service.generic_server", "yolo.demo.lb2_service"]
+        args: ["-u", "-m", "service.generic_server", "yolo.demo.lb2_service"]
         ports:
         - containerPort: 8080
+        imagePullPolicy: Always
 ---
 # bounding box service
 kind: Service
@@ -111,6 +113,7 @@ spec:
       - name: bb-service
         image: jiashenc/sysml-demo:yolo-amd64
         command: ["python"]
-        args: ["-m", "service.generic_server", "yolo.demo.bb_service"]
+        args: ["-u", "-m", "service.generic_server", "yolo.demo.bb_service"]
         ports:
         - containerPort: 8080
+        imagePullPolicy: Always
