@@ -36,7 +36,7 @@ spec:
         args: ["-u", "-m", "service.generic_server", "yolo.demo.lb1_service"]
         ports:
         - containerPort: 8080
-        imagePullPolicy: Always
+        imagePullPolicy: Never
 ---
 # lb2 service
 kind: Service
@@ -76,16 +76,16 @@ spec:
         args: ["-u", "-m", "service.generic_server", "yolo.demo.lb2_service"]
         ports:
         - containerPort: 8080
-        imagePullPolicy: Always
+        imagePullPolicy: Never
 ---
-# bounding box service
+# bounding box service 1
 kind: Service
 apiVersion: v1
 metadata:
-  name: bb-service
+  name: bb1-service
 spec:
   selector:
-    app: bb-service
+    app: bb1-service
   ports:
   - name: http
     protocol: TCP
@@ -96,24 +96,64 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: bb-service-deployment
+  name: bb1-service-deployment
   labels:
-    app: bb-service
+    app: bb1-service
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: bb-service
+      app: bb1-service
   template:
     metadata:
       labels:
-        app: bb-service
+        app: bb1-service
     spec:
       containers:
-      - name: bb-service
+      - name: bb1-service
         image: jiashenc/sysml-demo:yolo-amd64
         command: ["python"]
-        args: ["-u", "-m", "service.generic_server", "yolo.demo.bb_service"]
+        args: ["-u", "-m", "service.generic_server", "yolo.demo.bb1_service"]
         ports:
         - containerPort: 8080
-        imagePullPolicy: Always
+        imagePullPolicy: Never
+---
+# bounding box service 2
+kind: Service
+apiVersion: v1
+metadata:
+  name: bb2-service
+spec:
+  selector:
+    app: bb2-service
+  ports:
+  - name: http
+    protocol: TCP
+    port: 8080
+    targetPort: 8080
+  type: NodePort
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bb2-service-deployment
+  labels:
+    app: bb2-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bb2-service
+  template:
+    metadata:
+      labels:
+        app: bb2-service
+    spec:
+      containers:
+      - name: bb2-service
+        image: jiashenc/sysml-demo:yolo-amd64
+        command: ["python"]
+        args: ["-u", "-m", "service.generic_server", "yolo.demo.bb2_service"]
+        ports:
+        - containerPort: 8080
+        imagePullPolicy: Never
