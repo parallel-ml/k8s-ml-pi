@@ -37,17 +37,14 @@ class Service(GenericService):
         return np.fromstring(bytes, np.float32).reshape(size)
 
     def send(self, output):
-        print 'go to send'
         client = ipc.HTTPTransceiver('192.168.1.104', 8080)
         requestor = ipc.Requestor(PROTOCOL, client)
 
         packet = dict()
         packet['input'] = output
 
-        print 'go to send'
         result = requestor.request('forward', packet)
         client.close()
-        print 'go to send'
         return result
 
     def __repr__(self):

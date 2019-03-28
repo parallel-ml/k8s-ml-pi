@@ -1,4 +1,5 @@
 from service.generic_server import GenericResponder
+import time
 
 
 class Responder(GenericResponder):
@@ -8,10 +9,10 @@ class Responder(GenericResponder):
 
     def invoke(self, msg, req):
         try:
+            start = time.time()
             output = self.service.predict(req['input'])
-            print self.service, ' finish prediction'
+            print '%s latency: %.3f sec' % (self.service, (time.time() - start))
             next_result = self.service.send(output)
-            print self.service, ' get response'
             return next_result
 
         except Exception as e:
