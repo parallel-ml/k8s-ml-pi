@@ -4,28 +4,30 @@ Bounding box service takes care of model inference after darknet-53.
 from service.generic_service import GenericService
 from service.yolo.util import load_yolo_model
 import service.yolo.util as model_util
-from keras.layers import Input
+import avro.ipc as ipc
+import avro.protocol as protocol
 import os
 import numpy as np
 
 PATH = os.path.abspath(__file__)
 DIR_PATH = os.path.dirname(PATH)
 
+PROTOCOL = protocol.parse(open(DIR_PATH + '/../../../resource/protocol/msg.avpr').read())
+
 
 class Service(GenericService):
     def __init__(self):
         GenericService.__init__(self)
-        load_yolo_model((154, 252), {'add_11': Input([40, 40, 256]), 'add_19': Input([20, 20, 512])})
+        load_yolo_model([154, 188])
         self.model = model_util.model
         self.graph = model_util.graph
 
     def predict(self, input):
-        input = [self.to_numpy(input[0], [1, 20, 20, 512]), self.to_numpy(input[1], [1, 20, 20, 512]),
-                 self.to_numpy(input[2], [1, 40, 40, 256])]
+        data = self.to_numpy(input[0], [1, 20, 20, 512])
         with self.graph.as_default():
-            results = self.model.predict(input)
-        for i in range(len(results)):
-            results[i] = results[i].tobytes()
+            result = self.model.predict(data)
+
+        results = [result.tobytes(), input[1], input[2]]
         return results
 
     def simulate(self, size):
@@ -35,7 +37,15 @@ class Service(GenericService):
         return np.fromstring(bytes, np.float32).reshape(size)
 
     def send(self, output):
-        return output
+        client = ipc.HTTPTransceiver('bb2-service', 8080)
+        requestor = ipc.Requestor(PROTOCOL, client)
+
+        packet = dict()
+        packet['input'] = output
+
+        result = requestor.request('forward', packet)
+        client.close()
+        return result
 
     def __repr__(self):
-        return 'yolo.demo.bb-service'
+        return 'yolo.demo.bb1-service'

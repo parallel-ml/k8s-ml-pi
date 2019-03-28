@@ -3,6 +3,10 @@ import yaml
 from keras.layers import Conv2D, UpSampling2D, BatchNormalization, Add, Concatenate, LeakyReLU, Input, ZeroPadding2D, \
     Lambda
 from keras.models import Model
+import tensorflow as tf
+
+graph = None
+model = None
 
 
 def load_yolo_model(layer_range=(2, 252), pre_built=dict()):
@@ -25,6 +29,8 @@ def load_yolo_model(layer_range=(2, 252), pre_built=dict()):
 
     layers, output_layers = [], []
     layer_name_2_idx = dict()
+
+    global model, graph
 
     with open(dir_path + '/resource/model-structure-for-profile.json') as f:
         model_config = yaml.safe_load(f)
@@ -82,6 +88,8 @@ def load_yolo_model(layer_range=(2, 252), pre_built=dict()):
         model = Model(input_list, output=[layer for layer in output_layers])
     else:
         model = Model(input_list, output=layers[-1])
+
     model.summary()
     model.load_weights(dir_path + '/resource/yolo.h5', by_name=True)
-    return model
+
+    graph = tf.get_default_graph()

@@ -1,5 +1,6 @@
 from service.generic_service import GenericService
 from service.yolo.util import load_yolo_model
+import service.yolo.util as model_util
 import avro.ipc as ipc
 import avro.protocol as protocol
 import numpy as np
@@ -14,11 +15,15 @@ PROTOCOL = protocol.parse(open(DIR_PATH + '/../../../resource/protocol/msg.avpr'
 class Service(GenericService):
     def __init__(self):
         GenericService.__init__(self)
-        self.model = load_yolo_model([2, 93])
+        load_yolo_model([2, 93])
+        self.model = model_util.model
+        self.graph = model_util.graph
 
     def predict(self, input):
         input = np.fromstring(input[0], np.float64).reshape([1, 320, 320, 3])
-        return self.model.predict(input)
+        with self.graph.as_default():
+            output = self.model.predict(input)
+        return output
 
     def send(self, output):
         client = ipc.HTTPTransceiver('lb2-service', 8080)

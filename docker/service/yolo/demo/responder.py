@@ -9,9 +9,9 @@ class Responder(GenericResponder):
     def invoke(self, msg, req):
         try:
             output = self.service.predict(req['input'])
-            print 'finish prediction'
+            print self.service, ' finish prediction'
             next_result = self.service.send(output)
-            print 'get response from next layer'
+            print self.service, ' get response'
             return next_result
 
         except Exception as e:
