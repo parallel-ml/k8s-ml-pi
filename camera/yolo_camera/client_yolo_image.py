@@ -12,7 +12,7 @@ DIR_PATH = os.path.dirname(PATH)
 # read data packet format.
 PROTOCOL = protocol.parse(open(DIR_PATH + '/../../docker/resource/protocol/msg.avpr').read())
 # SERVER_ADDR = ['192.168.99.102', 31990]
-SERVER_ADDR = ['192.168.1.100', 32090]
+SERVER_ADDR = ['192.168.1.100', 31505]
 # SERVER_ADDR = ['127.0.0.1', 8080]
 
 net_h, net_w = 320, 320

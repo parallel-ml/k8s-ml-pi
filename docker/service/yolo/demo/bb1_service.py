@@ -23,7 +23,7 @@ class Service(GenericService):
         self.graph = model_util.graph
 
     def predict(self, input):
-        data = self.to_numpy(input[0], [1, 20, 20, 512])
+        data = [self.to_numpy(input[0], [1, 20, 20, 512])]
         with self.graph.as_default():
             result = self.model.predict(data)
 
@@ -33,18 +33,21 @@ class Service(GenericService):
     def simulate(self, size):
         return np.array([np.random.random_sample(size)])
 
-    def to_numpy(selfs, bytes, size):
+    def to_numpy(self, bytes, size):
         return np.fromstring(bytes, np.float32).reshape(size)
 
     def send(self, output):
-        client = ipc.HTTPTransceiver('bb2-service', 8080)
+        print 'go to send'
+        client = ipc.HTTPTransceiver('192.168.1.104', 8080)
         requestor = ipc.Requestor(PROTOCOL, client)
 
         packet = dict()
         packet['input'] = output
 
+        print 'go to send'
         result = requestor.request('forward', packet)
         client.close()
+        print 'go to send'
         return result
 
     def __repr__(self):

@@ -20,13 +20,13 @@ class Service(GenericService):
         self.graph = model_util.graph
 
     def predict(self, input):
-        input = np.fromstring(input[0], np.float64).reshape([1, 320, 320, 3])
+        data = [np.fromstring(input[0], np.float64).reshape([1, 320, 320, 3])]
         with self.graph.as_default():
-            output = self.model.predict(input)
+            output = self.model.predict(data)
         return output
 
     def send(self, output):
-        client = ipc.HTTPTransceiver('lb2-service', 8080)
+        client = ipc.HTTPTransceiver('192.168.1.102', 8080)
         requestor = ipc.Requestor(PROTOCOL, client)
 
         packet = dict()

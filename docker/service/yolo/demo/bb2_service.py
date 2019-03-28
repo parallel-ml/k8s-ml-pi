@@ -20,10 +20,10 @@ class Service(GenericService):
         self.graph = model_util.graph
 
     def predict(self, input):
-        input = [self.to_numpy(input[0], [1, 10, 10, 512]), self.to_numpy(input[1], [1, 20, 20, 512]),
-                 self.to_numpy(input[2], [1, 40, 40, 256])]
+        data = [self.to_numpy(input[0], [1, 10, 10, 512]), self.to_numpy(input[1], [1, 20, 20, 512]),
+                self.to_numpy(input[2], [1, 40, 40, 256])]
         with self.graph.as_default():
-            results = self.model.predict(input)
+            results = self.model.predict(data)
         for i in range(len(results)):
             results[i] = results[i].tobytes()
         return results
@@ -31,7 +31,7 @@ class Service(GenericService):
     def simulate(self, size):
         return np.array([np.random.random_sample(size)])
 
-    def to_numpy(selfs, bytes, size):
+    def to_numpy(self, bytes, size):
         return np.fromstring(bytes, np.float32).reshape(size)
 
     def send(self, output):
