@@ -11,8 +11,9 @@ DIR_PATH = os.path.dirname(PATH)
 
 # read data packet format.
 PROTOCOL = protocol.parse(open(DIR_PATH + '/../../docker/resource/protocol/msg.avpr').read())
-SERVER_ADDR = ['192.168.99.102', 31895]
-# SERVER_ADDR = ['localhost', 8080]
+# SERVER_ADDR = ['192.168.99.102', 31990]
+SERVER_ADDR = ['192.168.1.100', 32090]
+# SERVER_ADDR = ['127.0.0.1', 8080]
 
 net_h, net_w = 320, 320
 obj_thresh, nms_thresh = 0.5, 0.45
@@ -219,6 +220,7 @@ def trim_box(boxes):
 
 
 def send_request():
+    print 'Connecting ... %s:%s' % (SERVER_ADDR[0], SERVER_ADDR[1])
     client = ipc.HTTPTransceiver(SERVER_ADDR[0], SERVER_ADDR[1])
     requestor = ipc.Requestor(PROTOCOL, client)
 
@@ -266,7 +268,6 @@ def main():
 
 if __name__ == '__main__':
     # parse arguments from command line
-    print 'Using default localhost:8080'
     global image_path
     try:
         image_path = sys.argv[1]
