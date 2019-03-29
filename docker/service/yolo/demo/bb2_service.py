@@ -5,11 +5,7 @@ from service.generic_service import GenericService
 from service.yolo.util import load_yolo_model
 import service.yolo.util as model_util
 from keras.layers import Input
-import os
 import numpy as np
-
-PATH = os.path.abspath(__file__)
-DIR_PATH = os.path.dirname(PATH)
 
 
 class Service(GenericService):
@@ -33,9 +29,6 @@ class Service(GenericService):
 
     def to_numpy(self, bytes, size):
         return np.fromstring(bytes, np.float32).reshape(size)
-
-    def send(self, output):
-        return output
 
     def __repr__(self):
         return 'yolo.demo.bb2-service'

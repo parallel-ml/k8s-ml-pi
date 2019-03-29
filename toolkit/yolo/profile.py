@@ -4,7 +4,7 @@ import yaml
 import numpy as np
 import time
 
-MODEL_TOPO = 'resource/model-structure-for-profile.json'
+MODEL_TOPO = 'resource/model-structure.json'
 MODEL_WEIGHT = 'resource/yolo.h5'
 START, END = 1, 252
 LAYERS = []

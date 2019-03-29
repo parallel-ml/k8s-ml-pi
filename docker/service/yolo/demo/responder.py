@@ -12,8 +12,7 @@ class Responder(GenericResponder):
             start = time.time()
             output = self.service.predict(req['input'])
             print '%s latency: %.3f sec' % (self.service, (time.time() - start))
-            next_result = self.service.send(output)
-            return next_result
+            return output
 
         except Exception as e:
             print e

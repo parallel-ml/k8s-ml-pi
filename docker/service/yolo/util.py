@@ -32,7 +32,7 @@ def load_yolo_model(layer_range=(2, 252), pre_built=dict()):
 
     global model, graph
 
-    with open(dir_path + '/resource/model-structure-for-profile.json') as f:
+    with open(dir_path + '/resource/model-structure.json') as f:
         model_config = yaml.safe_load(f)
         for layer in layer_names:
             class_name = model_config[layer]['class_name']
