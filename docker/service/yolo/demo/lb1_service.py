@@ -15,7 +15,7 @@ class Service(GenericService):
         data = [np.fromstring(input[0], np.float64).reshape([1, 320, 320, 3])]
         with self.graph.as_default():
             output = self.model.predict(data)
-        return output.tobytes()
+        return [output.tobytes()]
 
     def __repr__(self):
         return 'yolo.demo.lb1-service'
