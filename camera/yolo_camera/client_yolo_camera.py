@@ -1,6 +1,36 @@
-""" Utility methods for YOLO model image detection and bound box drawing. """
 import numpy as np
+import os
+import avro.ipc as ipc
+import avro.protocol as protocol
 import cv2
+import time
+from threading import Thread
+from multiprocessing import Queue
+
+PATH = os.path.abspath(__file__)
+DIR_PATH = os.path.dirname(PATH)
+
+# read data packet format.
+PROTOCOL = protocol.parse(open(DIR_PATH + '/../../docker/resource/protocol/msg.avpr').read())
+# SERVER_ADDR = ['192.168.99.102', 31990]
+# SERVER_ADDR = ['192.168.1.101', 8080]
+SERVER_ADDR = ['127.0.0.1', 8080]
+
+IMAGES = Queue()
+
+net_h, net_w = 320, 320
+obj_thresh, nms_thresh = 0.5, 0.45
+anchors = [[116, 90, 156, 198, 373, 326], [30, 61, 62, 45, 59, 119], [10, 13, 16, 30, 33, 23]]
+labels = ['person', 'bicycle', 'car', 'motorbike', 'aeroplane', 'bus', 'train', 'truck',
+          'boat', 'traffic light', 'fire hydrant', 'stop sign', 'parking meter', 'bench',
+          'bird', 'cat', 'dog', 'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe',
+          'backpack', 'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee', 'skis', 'snowboard',
+          'sports ball', 'kite', 'baseball bat', 'baseball glove', 'skateboard', 'surfboard',
+          'tennis racket', 'bottle', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl', 'banana',
+          'apple', 'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 'donut', 'cake',
+          'chair', 'sofa', 'pottedplant', 'bed', 'diningtable', 'toilet', 'tvmonitor', 'laptop', 'mouse',
+          'remote', 'keyboard', 'cell phone', 'microwave', 'oven', 'toaster', 'sink', 'refrigerator',
+          'book', 'clock', 'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush']
 
 
 class BoundBox:
@@ -174,12 +204,11 @@ def draw_boxes(image, boxes, labels, obj_thresh):
         label = box.get_label()
         label_str = labels[label]
 
-        # This piece of code is commented out for simple RPC data transfer for services based demo
-        # for i in range(len(labels)):
-        #     if box.classes[i] > obj_thresh:
-        #         label_str += labels[i]
-        #         label = i
-        #         print(labels[i] + ': ' + str(box.classes[i] * 100) + '%')
+        for i in range(len(labels)):
+            if box.classes[i] > obj_thresh:
+                label_str += labels[i]
+                label = i
+                print(labels[i] + ': ' + str(box.classes[i] * 100) + '%')
 
         if label >= 0:
             cv2.rectangle(image, (box.xmin, box.ymin), (box.xmax, box.ymax), (0, 255, 0), 3)
@@ -193,28 +222,59 @@ def trim_box(boxes):
     return [box for box in boxes if box.get_score() > 0.5]
 
 
-def encode_box(boxes):
-    """ Encode box into array like structure for Avro to transfer """
-    encoded = []
-    for box in boxes:
-        encoded.append(box.xmin)
-        encoded.append(box.ymin)
-        encoded.append(box.xmax)
-        encoded.append(box.ymax)
-        encoded.append(box.get_label())
-        encoded.append(box.get_score())
-    return encoded
+def send_request(cap):
+    client = ipc.HTTPTransceiver(SERVER_ADDR[0], SERVER_ADDR[1])
+    requestor = ipc.Requestor(PROTOCOL, client)
 
+    ret, image = cap.read()
+    image_h, image_w, _ = image.shape
+    print image_h, image_w
+    data = preprocess_input(image, net_h, net_w)
 
-def decode_box(array):
-    """ Decode array like data structure to BoundBox object """
-    assert len(array) % 6 == 0, 'Cannot decode array with length that is not multiple of 6'
+    packet = dict()
+    packet['input'] = [data.tobytes()]
+
+    print 'Connecting ... %s:%s' % (SERVER_ADDR[0], SERVER_ADDR[1])
+    start = time.time()
+    array = requestor.request('forward', packet)
+    print 'Latency: %.3f sec' % (time.time() - start)
+
+    results = []
+    results.append(np.fromstring(array[0], np.float32).reshape([1, 10, 10, 255]))
+    results.append(np.fromstring(array[1], np.float32).reshape([1, 20, 20, 255]))
+    results.append(np.fromstring(array[2], np.float32).reshape([1, 40, 40, 255]))
 
     boxes = []
-    for i in range(0, len(array), 6):
-        xmin, ymin, xmax, ymax, label, score = array[i:i+6]
-        box = BoundBox(xmin, ymin, xmax, ymax)
-        box.score = score
-        box.label = label
-        boxes.append(box)
-    return boxes
+    for i in range(len(results)):
+        boxes += decode_netout(results[i][0], anchors[i], obj_thresh, nms_thresh, net_h, net_w)
+
+    correct_yolo_boxes(boxes, image_h, image_w, net_h, net_w)
+    do_nms(boxes, nms_thresh)
+    boxes = trim_box(boxes)
+    draw_boxes(image, boxes, labels, obj_thresh)
+    client.close()
+
+    IMAGES.put(image)
+
+
+def master(cap):
+    while True:
+        Thread(target=send_request, args=(cap,)).start()
+        time.sleep(7)
+
+
+def main():
+    cap = cv2.VideoCapture(0)
+    Thread(target=master, args=(cap,)).start()
+    while True:
+        key = cv2.waitKey(1) & 0xFF
+        if key == ord('q') or key == ord('\r') or key == ord('\n'):
+            break
+        cv2.imshow('Detected image', IMAGES.get())
+        time.sleep(6.5)
+    cap.release()
+    cv2.destroyAllWindows()
+
+
+if __name__ == '__main__':
+    main()

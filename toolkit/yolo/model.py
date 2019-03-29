@@ -3,8 +3,8 @@ from keras.models import Model, load_model
 from keras.layers import Input, Conv2D, Add, ZeroPadding2D, BatchNormalization, LeakyReLU, UpSampling2D, Concatenate
 import yaml
 import cv2
-from detection_util import preprocess_input, decode_netout, do_nms, draw_boxes, correct_yolo_boxes
-
+from detection_util import preprocess_input, decode_netout, do_nms, draw_boxes, correct_yolo_boxes, trim_box, \
+    encode_box, decode_box
 
 MODEL_TOPO = 'resource/model-structure.json'
 MODEL_WEIGHT = 'resource/yolo.h5'
@@ -90,6 +90,7 @@ if __name__ == '__main__':
     image_path = '/tmp/dog.jpg'
     image = cv2.imread(image_path)
     image_h, image_w, _ = image.shape
+    print image_h, image_w
     new_image = preprocess_input(image, net_h, net_w)
 
     model = load_model_from_weights()
@@ -102,5 +103,11 @@ if __name__ == '__main__':
 
     correct_yolo_boxes(boxes, image_h, image_w, net_h, net_w)
     do_nms(boxes, nms_thresh)
+
+    # test the encode code here in local
+    boxes = trim_box(boxes)
+    array = encode_box(boxes)
+    boxes = decode_box(array)
+
     draw_boxes(image, boxes, labels, obj_thresh)
     cv2.imwrite(image_path[:-4] + '_detected' + image_path[-4:], (image).astype('uint8'))

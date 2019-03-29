@@ -1,31 +1,40 @@
-from keras.models import Model
-from keras.layers import Input, Conv2D, Add, ZeroPadding2D, BatchNormalization, LeakyReLU, UpSampling2D, Concatenate
+""" Utility methods for YOLO model image detection and bound box drawing. """
 import yaml
-import numpy as np
-import time
+from keras.layers import Conv2D, UpSampling2D, BatchNormalization, Add, Concatenate, LeakyReLU, Input, ZeroPadding2D, \
+    Lambda
+from keras.models import Model
+import tensorflow as tf
 
-MODEL_TOPO = 'resource/model-structure.json'
-MODEL_WEIGHT = 'resource/yolo.h5'
-START, END = 1, 252
-LAYERS = []
+graph = None
+model = None
 
 
-def load_model_and_profile():
-    """ Customized method to load model from config. """
-    with open('resource/layers-names') as f:
-        for i, line in enumerate(f.read().splitlines()):
-            if START <= i <= END:
-                LAYERS.append(line)
+def load_yolo_model(layer_range=(2, 252), pre_built=dict()):
+    """
+        Helper method for loading YOLO model with customized topology and according weights
+
+        Args:
+            layer_range: Specify which layers to load, number points to lower range and upper
+            range of layer in layername file. This range is inclusive.
+    """
+    import os
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+
+    lower, upper = layer_range
+    lower -= 1
+    layer_names = []
+    with open(dir_path + '/resource/layers-names') as f:
+        for i, line in enumerate(f.read().splitlines()[lower:upper]):
+            layer_names.append(line)
 
     layers, output_layers = [], []
     layer_name_2_idx = dict()
 
-    with open(MODEL_TOPO) as f:
+    global model, graph
+
+    with open(dir_path + '/resource/model-structure.json') as f:
         model_config = yaml.safe_load(f)
-        data = None
-        count = 0
-        for layer in LAYERS:
-            count += 1
+        for layer in layer_names:
             class_name = model_config[layer]['class_name']
             config = model_config[layer]['config']
             input_shape = model_config[layer]['input_shape']
@@ -35,12 +44,13 @@ def load_model_and_profile():
             # previous layers picked from dictionary
             if len(layers) == 0:
                 layers.append(Input(input_shape))
-                data = np.random.random_sample(input_shape)
                 prev_layer = layers[-1]
             elif len(prev_layers) == 1:
                 prev_layer = layers[layer_name_2_idx[prev_layers[0]]]
             elif len(prev_layers) == 2:
-                prev_layer = [layers[layer_name_2_idx[name]] for name in prev_layers]
+                prev_layer = [
+                    layers[layer_name_2_idx[name]] if name in layer_name_2_idx else Lambda(lambda x: x)(pre_built[name])
+                    for name in prev_layers]
             else:
                 raise ValueError('Previous layer error is not handled')
 
@@ -68,21 +78,18 @@ def load_model_and_profile():
                 output_layers.append(prev_layer)
             layer_name_2_idx[layer] = len(layers) - 1
 
-            # profile the layer if it is a residual layer
-            if 'add' in layer and 'padding' not in layer:
-                model = Model(layers[0], output=[layer for layer in output_layers])
-                start = time.time()
-                for _ in range(100):
-                    model.predict(np.array([data]))
-                print '%s [%d, %d]: %.3f sec' % (layer, count - len(layers) + 1, count, (time.time() - start) / 100)
+    input_list = [layers[0]]
+    if 'add_19' in pre_built:
+        input_list.append(pre_built['add_19'])
+    if 'add_11' in pre_built:
+        input_list.append(pre_built['add_11'])
 
-    model = Model(layers[0], output=[layer for layer in output_layers])
-    start = time.time()
-    for _ in range(100):
-        model.predict(np.array([np.random.random_sample([227, 227, 3])]))
-    print '%s: %.3f sec' % ('total', (time.time() - start) / 100)
-    return model
+    if len(output_layers) > 0:
+        model = Model(input_list, output=[layer for layer in output_layers])
+    else:
+        model = Model(input_list, output=layers[-1])
 
+    model.summary()
+    model.load_weights(dir_path + '/resource/yolo.h5', by_name=True)
 
-if __name__ == '__main__':
-    load_model_and_profile()
+    graph = tf.get_default_graph()

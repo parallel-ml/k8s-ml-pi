@@ -1,5 +1,5 @@
 from service.generic_server import GenericResponder
-import numpy as np
+import time
 
 
 class Responder(GenericResponder):
@@ -9,10 +9,10 @@ class Responder(GenericResponder):
 
     def invoke(self, msg, req):
         try:
-            input_shape = req['input_shape']
-            data = np.fromstring(req['input'], req['input_type']).reshape(input_shape)
-            output = self.service.predict(data)
-            self.service.send(output)
+            start = time.time()
+            output = self.service.predict(req['input'])
+            print '%s latency: %.3f sec' % (self.service, (time.time() - start))
+            return output
 
         except Exception as e:
             print e

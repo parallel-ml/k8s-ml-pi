@@ -8,29 +8,33 @@ PATH = os.path.abspath(__file__)
 DIR_PATH = os.path.dirname(PATH)
 
 # read data packet format.
-PROTOCOL = protocol.parse(open(DIR_PATH + '/../resource/protocol/msg.avpr').read())
+PROTOCOL = protocol.parse(open(DIR_PATH + '/../../docker/resource/protocol/msg.avpr').read())
 
-SERVER_ADDR = ['localhost', 8000]
+SERVER_ADDR = ['localhost', 8080]
 
 
 def send_request():
     client = ipc.HTTPTransceiver(SERVER_ADDR[0], SERVER_ADDR[1])
     requestor = ipc.Requestor(PROTOCOL, client)
 
-    data = np.random.random_sample([220, 220, 3]) * 255
-    data = data.astype(np.uint8)
+    data1 = np.random.random_sample([1, 20, 20, 512])
+    data1 = data1.astype(np.float32)
+
+    data2 = np.random.random_sample([1, 20, 20, 512])
+    data2 = data2.astype(np.float32)
+
+    data3 = np.random.random_sample([1, 40, 40, 256])
+    data3 = data3.astype(np.float32)
 
     packet = dict()
-    packet['input'] = data.tobytes()
-    packet['input_shape'] = list(data.shape)
-    packet['input_type'] = str(data.dtype)
+    packet['input'] = [data1.tobytes(), data2.tobytes(), data3.tobytes()]
 
     requestor.request('forward', packet)
     client.close()
 
 
 def main():
-    for _ in range(10):
+    for _ in range(1):
         print 'Send request ... ... ',
         send_request()
         print 'Complete'
