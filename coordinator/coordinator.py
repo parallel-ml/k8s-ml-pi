@@ -101,9 +101,13 @@ def bb2_worker():
 
 def main():
     LB1_SERVICE.put('192.168.1.101')
-    LB2_SERVICE.put('192.168.1.102')
-    BB1_SERVICE.put('192.168.1.103')
-    BB2_SERVICE.put('192.168.1.104')
+    LB1_SERVICE.put('192.168.1.102')
+    LB1_SERVICE.put('192.168.1.103')
+    LB2_SERVICE.put('192.168.1.104')
+    LB2_SERVICE.put('192.168.1.105')
+    BB1_SERVICE.put('192.168.1.106')
+    BB2_SERVICE.put('192.168.1.107')
+    BB2_SERVICE.put('192.168.1.108')
 
     Thread(target=lb1_worker).start()
     Thread(target=lb2_worker).start()
