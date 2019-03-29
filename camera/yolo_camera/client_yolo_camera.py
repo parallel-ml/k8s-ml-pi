@@ -4,6 +4,8 @@ import avro.ipc as ipc
 import avro.protocol as protocol
 import cv2
 import time
+from threading import Thread
+from multiprocessing import Queue
 
 PATH = os.path.abspath(__file__)
 DIR_PATH = os.path.dirname(PATH)
@@ -11,8 +13,10 @@ DIR_PATH = os.path.dirname(PATH)
 # read data packet format.
 PROTOCOL = protocol.parse(open(DIR_PATH + '/../../docker/resource/protocol/msg.avpr').read())
 # SERVER_ADDR = ['192.168.99.102', 31990]
-SERVER_ADDR = ['192.168.1.101', 8080]
-# SERVER_ADDR = ['127.0.0.1', 8080]
+# SERVER_ADDR = ['192.168.1.101', 8080]
+SERVER_ADDR = ['127.0.0.1', 8080]
+
+IMAGES = Queue()
 
 net_h, net_w = 320, 320
 obj_thresh, nms_thresh = 0.5, 0.45
@@ -250,16 +254,24 @@ def send_request(cap):
     draw_boxes(image, boxes, labels, obj_thresh)
     client.close()
 
-    cv2.imshow('Detected image', image)
+    IMAGES.put(image)
+
+
+def master(cap):
+    while True:
+        Thread(target=send_request, args=(cap,)).start()
+        time.sleep(7)
 
 
 def main():
     cap = cv2.VideoCapture(0)
+    Thread(target=master, args=(cap,)).start()
     while True:
-        send_request(cap)
         key = cv2.waitKey(1) & 0xFF
         if key == ord('q') or key == ord('\r') or key == ord('\n'):
             break
+        cv2.imshow('Detected image', IMAGES.get())
+        time.sleep(6.5)
     cap.release()
     cv2.destroyAllWindows()
 
