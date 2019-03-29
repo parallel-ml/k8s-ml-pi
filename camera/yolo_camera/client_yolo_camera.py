@@ -228,13 +228,11 @@ def send_request(cap):
 
     ret, image = cap.read()
     image_h, image_w, _ = image.shape
-    print image_h, image_w
     data = preprocess_input(image, net_h, net_w)
 
     packet = dict()
     packet['input'] = [data.tobytes()]
 
-    print 'Connecting ... %s:%s' % (SERVER_ADDR[0], SERVER_ADDR[1])
     start = time.time()
     array = requestor.request('forward', packet)
     print 'Latency: %.3f sec' % (time.time() - start)
@@ -260,10 +258,11 @@ def send_request(cap):
 def master(cap):
     while True:
         Thread(target=send_request, args=(cap,)).start()
-        time.sleep(7)
+        time.sleep(2)
 
 
 def main():
+    start, count = 0, 0
     cap = cv2.VideoCapture(0)
     Thread(target=master, args=(cap,)).start()
     while True:
@@ -271,7 +270,11 @@ def main():
         if key == ord('q') or key == ord('\r') or key == ord('\n'):
             break
         cv2.imshow('Detected image', IMAGES.get())
-        time.sleep(6.5)
+        count += 1
+        if start == 0:
+            start = time.time()
+        else:
+            print 'Throughput: %.3f sec' % (count / (time.time() - start))
     cap.release()
     cv2.destroyAllWindows()
 
